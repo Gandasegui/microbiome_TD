@@ -11,6 +11,9 @@ metadata_tib <- as_tibble(metadata)
 metadata_tib$bristol <- as.numeric(metadata_tib$bristol)
 ```
 
+For the three-group-criteria - variable is codified as "clingroup"
+For the two-group-criteria - variable is codified as "clingroup_2"
+
 #### For the three-group-criteria
 
 ```R
