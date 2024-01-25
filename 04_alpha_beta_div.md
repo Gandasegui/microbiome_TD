@@ -14,12 +14,12 @@ library(vegan)
 ### Alpha div
 
 ```R
-#Plotting refractary ASVs
+Plotting refractory ASVs
 otu_tab <- t(abundances(pseq))
 ASVs <- vegan::rarecurve(otu_tab, 
-                      step = 50, label = FALSE, 
-                      sample = min(rowSums(otu_tab), 
-                                   col = "blue", cex = 0.6))
+                         step = 50, label = FALSE, 
+                         sample = min(rowSums(otu_tab), 
+                                      col = "blue", cex = 0.6))
 p.rar <- plot_taxa_prevalence(pseq, "Phylum")
 #rarefying at 3000 keeps all the samples, so go for it
 pseq.rar <- rarefy_even_depth(pseq, rngseed=1, sample.size=3000, replace=F)
@@ -159,13 +159,7 @@ box_PD_2 <- ggplot(div_analysis, aes(x = clingroup_2, y = PD, fill = clingroup_2
 boxplot_div_2gruop <- ggarrange(box_sha_2, box_chao_2, box_sim_2, box_PD_2,
                                 ncol = 4)
 boxplot_div_3gruop <- ggarrange(box_sha_1,  box_chao_1, box_sim_1, box_PD_1, ncol = 4)
-boxplot_all_div <- ggarrange(boxplot_div_2gruop, boxplot_div_3gruop, ncol = 1, labels = c('a', 'b'))
-```
-
-#### Alpha diversity and LCN2
-
-```R
-#first we check for normality
+boxplot_all_div <- ggarrange(boxplot_div_2gruop, boxplot_div_3gruop, ncol = 1, labels = c('a', 'b'))#first we check for normality
 div_analysis$lcn2 <- as.numeric(div_analysis$lcn2)
 shapiro.test(div_analysis$lcn2)
 #W = 0.86855, p-value = 9.717e-06, so we have to go for non-parametric tests
@@ -212,7 +206,7 @@ print(res_diversity_gini_simpson$p.value)
 
 simp <- ggplot(div_analysis, aes(x = diversity_inverse_simpson, y = lcn2)) + 
   geom_point(col = "gold2", size = 2) +
-    ylab('LCN-2') + 
+  ylab('LCN-2') + 
   xlab("Simpson") +
   annotate("text", x = 80, y = 17500, col = 'grey32',
            label = paste0(" rho = -0.05", ", pval = 0.68")) +
@@ -231,7 +225,7 @@ pd <- ggplot(div_analysis, aes(x = diversity_shannon, y = lcn2)) +
   theme_light()
 
 ggarrange(sha, cha, simp, pd, labels = c('a', 'b', 'c', 'd'))
-ggsave('Figures/FigS1_alpha_div_lcn2.tiff', width = 9, height = 7)
+ggsave('Figures2/FigS1_alpha_div_lcn2.tiff', width = 9, height = 7)
 
 #Now, we repeat the analysis but only using TD patients
 #first we select ill people
@@ -326,8 +320,8 @@ poca_unw_lcn2 <- ggplot(beta_div_unw, aes(x = Axis.1, y = Axis.2, col = lcn2)) +
   theme_light() +
   xlab('PC1 (9.4%)') +
   ylab('PC2 (6%)') + 
-  scale_color_viridis_b()  +
-  labs(color='LCN-2')
+  scale_color_viridis()  +
+  labs(color='LCN2')
 
 poca_unw_group <- ggplot(beta_div_unw, aes(x = Axis.1, y = Axis.2, col = clingroup)) + 
   geom_point(size = 3) +
@@ -357,8 +351,8 @@ poca_wt_lcn2 <- ggplot(beta_div_wt, aes(x = Axis.1, y = Axis.2, col = lcn2)) +
   theme_light() +
   xlab('PC1 (7.4%)') +
   ylab('PC2 (6.6%)') + 
-  scale_color_viridis_b() +
-  labs(color='LCN-2')
+  scale_color_viridis() +
+  labs(color='LCN2')
 
 poca_wt_group <- ggplot(beta_div_wt, aes(x = Axis.1, y = Axis.2, col = clingroup)) + 
   geom_point(size = 3) +
@@ -372,10 +366,6 @@ poca_wt_group <- ggplot(beta_div_wt, aes(x = Axis.1, y = Axis.2, col = clingroup
 group <- ggarrange(poca_unw_group, poca_wt_group, labels = c('c', 'd'), common.legend = T, legend = 'right')
 lcn2 <- ggarrange(poca_unw_lcn2, poca_wt_lcn2, labels = c('e', 'f'), common.legend = T, legend = 'right')
 beta_div <- ggarrange(group, lcn2, nrow = 2)
-```
-#### LEt's generate Fig1
-
-```R
 ggarrange(boxplot_all_div, beta_div, nrow = 2)
 ggsave('Figures/Fig1_alpha_beta_div.tiff', width = 9, height = 12)
 ```
