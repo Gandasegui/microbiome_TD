@@ -1,4 +1,4 @@
-# Code to perform DA on clinical groups by ANCOM-BC, ALDEx, and ML
+# Code to perform DA on clinical groups by ANCOM-BC and ALDEx
 
 Important note, some of the R objects used in this script were generated in the script *06_DA_testing_LCN2.md*
 
@@ -13,11 +13,15 @@ library(vegan)
 library('ALDEx2')
 library(ANCOMBC)
 library(mia)
-library("SHAPforxgboost")
-library("here")
-library(xgboost)
-library(patchwork)
 ```
+## Let's do a boxplot to explore the differences
+
+```R
+
+```
+
+## Let's do DA testing
+
 ### At PHYLUM level using ANCOM-BC and ALDEx
 
 ```R
@@ -248,147 +252,4 @@ aldex_gen_clingroup <- aldex(assay(tse_gen), tse_phy$clingroup, denom = 'all',
 #Two groups - nothing significant
 aldex_gen_clingroup2 <- aldex(assay(tse_gen), tse_phy$clingroup_2, denom = 'all',
                               test = 'kw')#Nothing significant
-```
-### Nothing significant in any DA test
-
-#### Nevertheless, let's see what happens using the SHAP values
-Seeing no differences, here-in-after we will compare only two groups
-
-### Phylum
-
-```R
-xg_phy <- comp_phy_df %>%
-  dplyr::select('sample-id', 'lcn2', "clingroup_2", "Actinobacteriota", 
-                "Bacteroidota", "Desulfobacterota", "Firmicutes", "Other", 
-                "Proteobacteria", "Verrucomicrobiota")
-xg_phy$clingroup_2 <- str_replace(xg_phy$clingroup_2, '1', '0')
-xg_phy$clingroup_2 <- str_replace(xg_phy$clingroup_2, '2', '1')
-colnames(xg_phy) <- str_replace(colnames(xg_phy), "clingroup_2", "0-No TD; 1 = TD")
-colnames(xg_phy) <- str_replace(colnames(xg_phy), "lcn2", "LCN2")
-
-phy <- c(colnames(xg_phy))[-(1)]
-phy <- phy[-2]
-  
-dataX <- data.matrix(xg_phy[phy])
-mod <- xgboost::xgboost(data = dataX, 
-                        label = xg_phy$`0-No TD; 1 = TD`, 
-                        params = list(objective = "binary:logistic", learning_rate = 1),
-                        nrounds = 500)
-# To return the SHAP values and ranked features by mean|SHAP|
-shap_values <- shap.values(xgb_model = mod, X_train = dataX)
-# The ranked features by mean |SHAP|
-shap_values$mean_shap_score
-# To prepare the long-format data:
-shap_long <- shap.prep(xgb_model = mod, X_train = dataX)
-# is the same as: using given shap_contrib
-shap_long <- shap.prep(shap_contrib = shap_values$shap_score, X_train = dataX)
-# **SHAP summary plot**
-shap_imp_phy <- shap.plot.summary(shap_long)
-# SHAP first 4 var
-fig_list <- lapply(names(shap_values$mean_shap_score)[1:4], 
-                   shap.plot.dependence, data_long = shap_long)
-shap_imp_top_phy <- gridExtra::grid.arrange(grobs = fig_list, ncol = 2)
-
-fir <- shap.plot.dependence(data_long = shap_long, x = 'Firmicutes', y = 'Firmicutes', color_feature = "LCN2")
-bac <- shap.plot.dependence(data_long = shap_long, x = 'Bacteroidota', y = 'Bacteroidota', color_feature = "LCN2")
-lcn <- shap.plot.dependence(data_long = shap_long, x = 'LCN2', y = 'LCN2', color_feature = "LCN2")
-act <- shap.plot.dependence(data_long = shap_long, x = 'Actinobacteriota', y = 'Actinobacteriota', color_feature = "LCN2")
-
-shap_imp_top_phy <- ggarrange(fir, bac, lcn, act, common.legend = T)
-#arrange
-phy_shap_TD <- ggarrange(shap_imp_phy, shap_imp_top_phy, labels = c('e', 'f'),
-                         ncol = 2, vjust = 1, font.label = list(size = 18))
-ggarrange(box_DA_phy, phy_shap_TD, nrow = 2, heights = c(1, 1))
-ggsave('Figures/FigS3_DA_phylum_TD.tiff', width = 11, height = 11)
-```
- 
-### Family
-
-```R
-xg_fam <- comp_fam_df %>%
-  dplyr::select('sample-id', 'lcn2', "clingroup_2", pseq_all_families)
-colnames(xg_fam) <- str_replace(colnames(xg_fam), "_group", "")
-xg_fam$clingroup_2 <- str_replace(xg_fam$clingroup_2, '1', '0')
-xg_fam$clingroup_2 <- str_replace(xg_fam$clingroup_2, '2', '1')
-colnames(xg_fam) <- str_replace(colnames(xg_fam), "clingroup_2", "0-No TD; 1 = TD")
-colnames(xg_fam) <- str_replace(colnames(xg_fam), "lcn2", "LCN2")
-
-fam <- c(colnames(xg_fam))[-1]
-fam <- fam[-2]
-
-dataX <- data.matrix(xg_fam[fam])
-mod <- xgboost::xgboost(data = dataX, 
-                        label = xg_phy$`0-No TD; 1 = TD`, 
-                        params = list(objective = "binary:logistic", learning_rate = 1),
-                        nrounds = 500)
-# To return the SHAP values and ranked features by mean|SHAP|
-shap_values <- shap.values(xgb_model = mod, X_train = dataX)
-# The ranked features by mean |SHAP|
-shap_values$mean_shap_score
-# To prepare the long-format data:
-shap_long <- shap.prep(xgb_model = mod, X_train = dataX)
-# is the same as: using given shap_contrib
-shap_long <- shap.prep(shap_contrib = shap_values$shap_score, X_train = dataX, top_n = 20)
-# **SHAP summary plot**
-shap_imp_fam <- shap.plot.summary(shap_long)
-# SHAP first 4 var
-fig_list <- lapply(names(shap_values$mean_shap_score)[1:4], 
-                   shap.plot.dependence, data_long = shap_long)
-shap_imp_top_fam <- gridExtra::grid.arrange(grobs = fig_list, ncol = 2)
-
-rik <- shap.plot.dependence(data_long = shap_long, x = 'Rikenellaceae', y = 'Rikenellaceae', color_feature = "LCN2")
-bac <- shap.plot.dependence(data_long = shap_long, x = 'Bacteroidaceae', y = 'Bacteroidaceae', color_feature = "LCN2")
-ent <- shap.plot.dependence(data_long = shap_long, x = 'Enterobacteriaceae', y = 'Enterobacteriaceae', color_feature = "LCN2")
-lac <- shap.plot.dependence(data_long = shap_long, x = 'Lachnospiraceae', y = 'Lachnospiraceae', color_feature = "LCN2")
-
-shap_imp_top_fam <- ggarrange(rik, bac, ent, lac, common.legend = T)
-#arrange
-shap_fam_TD <- ggarrange(shap_imp_fam, shap_imp_top_fam, labels = c('a', 'b'), ncol = 2,
-                      widths = c(1.2, 1), heights = c(1.5, 1) ,vjust = 1, font.label = list(size = 18))
-```
-
-### Genus
-
-```R
-xg_gen <- comp_gen_df %>%
-  dplyr::select('sample-id', 'lcn2', "clingroup_2", pseq_all_genus)
-colnames(xg_gen) <- str_replace(colnames(xg_gen), "_group", "")
-xg_gen$clingroup_2 <- str_replace(xg_gen$clingroup_2, '1', '0')
-xg_gen$clingroup_2 <- str_replace(xg_gen$clingroup_2, '2', '1')
-colnames(xg_gen) <- str_replace(colnames(xg_gen), "clingroup_2", "0-No TD; 1 = TD")
-colnames(xg_gen) <- str_replace(colnames(xg_gen), "lcn2", "LCN2")
-
-gen <- c(colnames(xg_gen))[-(1)]
-gen <- gen[-2]
-
-dataX <- data.matrix(xg_gen[gen])
-mod <- xgboost::xgboost(data = dataX, 
-                        label = xg_phy$`0-No TD; 1 = TD`, 
-                        params = list(objective = "binary:logistic", learning_rate = 1),
-                        nrounds = 500)
-# To return the SHAP values and ranked features by mean|SHAP|
-shap_values <- shap.values(xgb_model = mod, X_train = dataX)
-# The ranked features by mean |SHAP|
-shap_values$mean_shap_score
-# To prepare the long-format data:
-shap_long <- shap.prep(xgb_model = mod, X_train = dataX)
-# is the same as: using given shap_contrib
-shap_long <- shap.prep(shap_contrib = shap_values$shap_score, X_train = dataX, top_n = 20)
-# **SHAP summary plot**
-shap_imp_gen <- shap.plot.summary(shap_long)
-# SHAP first 4 var
-fig_list <- lapply(names(shap_values$mean_shap_score)[1:4], 
-                   shap.plot.dependence, data_long = shap_long)
-shap_imp_top_gen <- gridExtra::grid.arrange(grobs = fig_list, ncol = 2)
-
-ali <- shap.plot.dependence(data_long = shap_long, x = 'Alistipes', y = 'Alistipes', color_feature = "LCN2")
-esc <- shap.plot.dependence(data_long = shap_long, x = 'Escherichia-Shigella', y = 'Escherichia-Shigella', color_feature = "LCN2")
-bac <- shap.plot.dependence(data_long = shap_long, x = 'Bacteroides', y = 'Bacteroides', color_feature = "LCN2")
-lac <- shap.plot.dependence(data_long = shap_long, x = 'Lachnospira', y = 'Lachnospira', color_feature = "LCN2")
-shap_imp_top_gen <- ggarrange(ali, esc, bac, lac, common.legend = T)
-#arrange
-shap_gen_TD <- ggarrange(shap_imp_gen, shap_imp_top_gen, labels = c('c', 'd'), ncol = 2,
-                         widths = c(1.2, 1), heights = c(1.5, 1) ,vjust = 1, font.label = list(size = 18))
-ggarrange(shap_fam_TD, shap_gen_TD, ncol = 1, heights = c(1, 1))
-ggsave('Figures/FigS4_DA_fam_gen_TD.tiff', width = 12, height = 12)
 ```
