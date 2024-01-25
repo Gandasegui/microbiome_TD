@@ -16,6 +16,7 @@ library(umap)
 
 ### At PHYLUM level
 
+
 ```R
 #Let's rename the object, just in case
 ps.phy <- pseq
