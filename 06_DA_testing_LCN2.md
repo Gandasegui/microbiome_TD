@@ -1,4 +1,4 @@
-# Code to perfomr DA testing by soearman correlation, SLDEx and ML
+# Code to perfomr DA testing by spearman correlation and ALDEx
 #### At phylum, family and genus level
 
 ```R
