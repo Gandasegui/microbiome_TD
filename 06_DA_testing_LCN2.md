@@ -405,3 +405,276 @@ ggarrange(plot_phy, scat_fam_gen, ncol = 1, heights = c(2,1))
 
 ggsave('Figures/Fig2_DA_LCN2.tiff', width = 11, height = 11)
 ```
+
+## UMAP for association LCN2 - bacteria abundances
+
+```R
+#First, let's generate a database with all the features
+out_var <- comp_phy_df %>% dplyr::select('sample-id', 'lcn2', 'clingroup', 'clingroup_2')
+
+comp_phy_df_no_out <- subset(comp_phy_df, select = -c(lcn2, clingroup, clingroup_2))
+comp_fam_df_no_out <- subset(comp_fam_df, select = -c(lcn2, clingroup, clingroup_2))
+comp_gen_df_no_out <- subset(comp_gen_df, select = -c(lcn2, clingroup, clingroup_2))
+
+all_bact_df <- comp_phy_df_no_out %>%
+  dplyr::left_join(., comp_fam_df_no_out, by = 'sample-id') %>%
+  dplyr::left_join(., comp_gen_df_no_out, by = 'sample-id')
+
+all_bact_df <- all_bact_df[,-1]
+
+#Now, let's see what bacteria are significant for both methods
+
+#First none-adjausted p-val
+noadj_phy <- c('Firmicutes', 'Proteobacteria')
+
+noadj_fam <- aldex_sp_fam_res %>% 
+  filter(sp_pval < 0.05 | ALDEx_pval < 0.05)
+noadj_fam <- as.vector(noadj_fam$family)
+noadj_fam <- str_replace(noadj_fam, 'Clostridia_UCG-014', 'Clostridia_UCG-014.x')
+
+noadj_gen <- aldex_sp_gen_res %>% 
+  filter(sp_pval < 0.05 | ALDEx_pval < 0.05)
+noadj_gen <- as.vector(noadj_gen$genus)
+noadj_gen <- str_replace(noadj_gen, 'Clostridia_UCG-014', 'Clostridia_UCG-014.y')
+
+noadj_all <- c(noadj_phy, noadj_fam, noadj_gen)
+
+#Second adjusted p-val
+adj_phy <- c('Firmicutes', 'Proteobacteria')
+
+adj_fam <- aldex_sp_fam_res %>% 
+  filter(sp_pval_adj < 0.05 | ALDEx_pval_adj < 0.05)
+adj_fam <- as.vector(adj_fam$family)
+
+adj_gen <- aldex_sp_gen_res %>% 
+  filter(sp_pval_adj < 0.05 | ALDEx_pval_adj < 0.05)
+adj_gen <- as.vector(adj_gen$genus)
+
+adj_all <- c(adj_phy, adj_fam, adj_gen)
+
+#Now, let's select the different databases and add lcn2 - 
+#ALL bacteria
+all_bact_df_norm <- scale(all_bact_df)
+all_bact.umap <- umap(all_bact_df_norm)
+all_bact.umap_df <- as_tibble(all_bact.umap$layout)
+
+all_bact.umap_df <- out_var %>%
+  dplyr::select(., 'lcn2') %>%
+  cbind(all_bact.umap_df, .)%>%
+  as_tibble()
+
+all_bact.umap_df <- all_bact.umap_df %>%
+  mutate(log_lcn2 = log(lcn2))
+
+norm_all_log <- ggplot(all_bact.umap_df, aes(x=V1, y=V2, color = log_lcn2)) +
+  geom_point(size = 2.5) +
+  labs(color = "log(LCN2)") +
+  theme(legend.title = element_text()) +
+  theme_bw() +
+  scale_color_viridis()
+
+#Non adjusted p-val
+noadj_bact_df <- subset(all_bact_df, select=noadj_all)
+noadj_bact_df_norm <- scale(noadj_bact_df)
+noadj_bact.umap <- umap(noadj_bact_df_norm)
+noadj_bact.umap_df <- as_tibble(noadj_bact.umap$layout)
+
+noadj_bact.umap_df <- out_var %>%
+  dplyr::select(., 'lcn2') %>%
+  cbind(noadj_bact.umap_df, .)%>%
+  as_tibble()
+
+noadj_bact.umap_df <- noadj_bact.umap_df %>%
+  mutate(log_lcn2 = log(lcn2))
+
+norm_noadj_log <- ggplot(noadj_bact.umap_df, aes(x=V1, y=V2, color = log_lcn2)) +
+  geom_point(size = 2.5) +
+  labs(color = "log(LCN2)") +
+  theme(legend.title = element_text()) +
+  theme_bw() +
+  scale_color_viridis()
+
+#Adjusted p-val
+adj_bact_df <- subset(all_bact_df, select=adj_all)
+adj_bact_df_norm <- scale(adj_bact_df)
+adj_bact.umap <- umap(adj_bact_df_norm)
+adj_bact.umap_df <- as_tibble(adj_bact.umap$layout)
+
+adj_bact.umap_df <- out_var %>%
+  dplyr::select(., 'lcn2') %>%
+  cbind(adj_bact.umap_df, .)%>%
+  as_tibble()
+
+adj_bact.umap_df <- adj_bact.umap_df %>%
+  mutate(log_lcn2 = log(lcn2))
+
+norm_adj_log <- ggplot(adj_bact.umap_df, aes(x=V1, y=V2, color = log_lcn2)) +
+  geom_point(size = 2.5) +
+  labs(color = "log(LCN2)") +
+  theme(legend.title = element_text()) +
+  theme_bw() +
+  scale_color_viridis()
+
+############
+norm_log <- ggarrange(norm_all_log, norm_noadj_log, norm_adj_log, ncol = 1,
+                        labels = c('b', 'd', 'f'), common.legend = T)
+#####################
+
+#Let's try with sp and Aldex separately
+
+#First none-adjausted p-val for sp
+noadj_phy <- c('Firmicutes', 'Proteobacteria')
+
+noadj_fam <- aldex_sp_fam_res %>% 
+  filter(sp_pval < 0.05)
+noadj_fam <- as.vector(noadj_fam$family)
+noadj_fam <- str_replace(noadj_fam, 'Clostridia_UCG-014', 'Clostridia_UCG-014.x')
+
+noadj_gen <- aldex_sp_gen_res %>% 
+  filter(sp_pval < 0.05)
+noadj_gen <- as.vector(noadj_gen$genus)
+noadj_gen <- str_replace(noadj_gen, 'Clostridia_UCG-014', 'Clostridia_UCG-014.y')
+
+noadj_all_sp <- c(noadj_phy, noadj_fam, noadj_gen)
+
+#Second adjusted p-val - Sp
+adj_phy <- c('Firmicutes', 'Proteobacteria')
+
+adj_fam <- aldex_sp_fam_res %>% 
+  filter(sp_pval_adj < 0.05)
+adj_fam <- as.vector(adj_fam$family)
+
+adj_gen <- aldex_sp_gen_res %>% 
+  filter(sp_pval_adj < 0.05)
+adj_gen <- as.vector(adj_gen$genus)
+
+adj_all_sp <- c(adj_phy, adj_fam, adj_gen)
+
+#
+#No adjusted p-val - Sp
+noadj_bact_df <- scale(subset(all_bact_df, select=noadj_all_sp))
+noadj_bact.umap <- umap(noadj_bact_df)
+noadj_bact.umap_df <- as_tibble(noadj_bact.umap$layout)
+
+noadj_bact.umap_df <- out_var %>%
+  dplyr::select(., 'lcn2') %>%
+  cbind(noadj_bact.umap_df, .)%>%
+  as_tibble()
+
+noadj_bact.umap_df <- noadj_bact.umap_df %>%
+  mutate(log_lcn2 = log(lcn2))
+
+Sp_noadj_log <- ggplot(noadj_bact.umap_df, aes(x=V1, y=V2, color = log_lcn2)) +
+  geom_point(size = 2.5) +
+  labs(color = "log(LCN2)") +
+  theme(legend.title = element_text()) +
+  theme_bw() +
+  scale_color_viridis()
+
+# P-Val adjusted bacteria
+adj_bact_df <- scale(subset(all_bact_df, select=adj_all_sp))
+adj_bact.umap <- umap(adj_bact_df, n_neighbors = 15)
+adj_bact.umap_df <- as_tibble(adj_bact.umap$layout)
+
+adj_bact.umap_df <- out_var %>%
+  dplyr::select(., 'lcn2') %>%
+  cbind(adj_bact.umap_df, .)%>%
+  as_tibble()
+
+adj_bact.umap_df <- adj_bact.umap_df %>%
+  mutate(log_lcn2 = log(lcn2))
+
+Sp_adj_log <- ggplot(adj_bact.umap_df, aes(x=V1, y=V2, color = log_lcn2)) +
+  geom_point(size = 2.5) +
+  labs(color = "log(LCN2)") +
+  theme(legend.title = element_text()) +
+  theme_bw() +
+  scale_color_viridis()
+
+#Second none-adjausted p-val for ALDEx
+noadj_phy <- c('Proteobacteria')
+
+noadj_fam <- aldex_sp_fam_res %>% 
+  filter(ALDEx_pval < 0.05)
+noadj_fam <- as.vector(noadj_fam$family)
+
+noadj_gen <- aldex_sp_gen_res %>% 
+  filter(ALDEx_pval < 0.05)
+noadj_gen <- as.vector(noadj_gen$genus)
+
+noadj_all_ALDEx <- c(noadj_phy, noadj_fam, noadj_gen)
+
+#Second adjusted p-val - ALDEx
+adj_phy <- c('Proteobacteria')
+
+adj_fam <- aldex_sp_fam_res %>% 
+  filter(ALDEx_pval_adj < 0.05)
+adj_fam <- as.vector(adj_fam$family)
+
+adj_gen <- aldex_sp_gen_res %>% 
+  filter(ALDEx_pval_adj < 0.05)
+adj_gen <- as.vector(adj_gen$genus)
+
+adj_all_ALDEx <- c(adj_phy, adj_fam, adj_gen)
+
+#
+#No adjusted p-val - ALDEx
+noadj_bact_df <- scale(subset(all_bact_df, select=noadj_all_ALDEx))
+noadj_bact.umap <- umap(noadj_bact_df)
+noadj_bact.umap_df <- as_tibble(noadj_bact.umap$layout)
+
+noadj_bact.umap_df <- out_var %>%
+  dplyr::select(., 'lcn2') %>%
+  cbind(noadj_bact.umap_df, .)%>%
+  as_tibble()
+
+noadj_bact.umap_df <- noadj_bact.umap_df %>%
+  mutate(log_lcn2 = log(lcn2))
+
+
+ALDEx_noadj_log <- ggplot(noadj_bact.umap_df, aes(x=V1, y=V2, color = log_lcn2)) +
+  geom_point(size = 2.5) +
+  labs(color = "log(LCN2)") +
+  theme(legend.title = element_text()) +
+  theme_bw() +
+  scale_color_viridis()
+
+# P-Val adjusted bacteria
+adj_bact_df <- scale(subset(all_bact_df, select=adj_all_ALDEx))
+adj_bact.umap <- umap(adj_bact_df, n_neighbors = 12)
+adj_bact.umap_df <- as_tibble(adj_bact.umap$layout)
+
+adj_bact.umap_df <- out_var %>%
+  dplyr::select(., 'lcn2') %>%
+  cbind(adj_bact.umap_df, .)%>%
+  as_tibble()
+
+adj_bact.umap_df <- adj_bact.umap_df %>%
+  mutate(log_lcn2 = log(lcn2))
+
+ALDEx_adj_log <- ggplot(adj_bact.umap_df, aes(x=V1, y=V2, color = log_lcn2)) +
+  geom_point(size = 2.5) +
+  labs(color = "log(LCN2)") +
+  theme(legend.title = element_text()) +
+  theme_bw() +
+  scale_color_viridis()
+#LEt's do two extra plots to see if we can say something else
+adj_bact.umap_df_abun <- as_tibble(cbind(adj_bact.umap_df, subset(all_bact_df, select=adj_all_ALDEx)))
+
+ALDEx_adj_log_ab <- ggplot(adj_bact.umap_df_abun, aes(x=V1, y=V2, color = log(Proteobacteria), size = Oscillospiraceae)) +
+  geom_point(alpha = 0.7) +
+  labs(color = "Proteobacteria", size = 'Oscillospiraceae') +
+  theme(legend.title = element_text()) +
+  theme_bw() +
+  scale_color_gradient(low = "yellow", high = "red", na.value = NA)
+
+#For ploting, we will select 
+top_plots <- ggarrange(norm_all_log, Sp_noadj_log, norm_adj_log, common.legend = T, 
+                       labels = c('a', 'b', 'c'), legend = 'right', nrow = 1)
+botton_plots <- ggarrange(ALDEx_adj_log, ALDEx_adj_log_ab, labels = c('d', 'e'), 
+                          widths = c(1,1.0))
+
+#LEt's do the figure
+ggarrange(top_plots, botton_plots, nrow = 2, heights = c(1,1.2))
+ggsave('Figures/Fig3_UMAP.tiff', width = 10, height = 7)
+```
