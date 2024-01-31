@@ -574,7 +574,7 @@ Sp_noadj_log <- ggplot(noadj_bact.umap_df, aes(x=V1, y=V2, color = log_lcn2)) +
 
 # P-Val adjusted bacteria
 adj_bact_df <- scale(subset(all_bact_df, select=adj_all_sp))
-adj_bact.umap <- umap(adj_bact_df, n_neighbors = 15)
+adj_bact.umap <- umap(adj_bact_df)
 adj_bact.umap_df <- as_tibble(adj_bact.umap$layout)
 
 adj_bact.umap_df <- out_var %>%
@@ -642,7 +642,7 @@ ALDEx_noadj_log <- ggplot(noadj_bact.umap_df, aes(x=V1, y=V2, color = log_lcn2))
 
 # P-Val adjusted bacteria
 adj_bact_df <- scale(subset(all_bact_df, select=adj_all_ALDEx))
-adj_bact.umap <- umap(adj_bact_df, n_neighbors = 12)
+adj_bact.umap <- umap(adj_bact_df)
 adj_bact.umap_df <- as_tibble(adj_bact.umap$layout)
 
 adj_bact.umap_df <- out_var %>%
