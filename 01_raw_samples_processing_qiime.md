@@ -92,7 +92,7 @@ mv dada_table.qza table.qza
 #### Now, load into R the following files and generate the phyloseq object:
 rooted-tree.qza
 
-metadata_mod.tsv
+metadata_TD.tsv
 
 table.qza
 
